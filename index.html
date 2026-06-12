@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MSAL PKCE SPA (Multi-/Single-tenant)</title>
+    <style>
+      body{font-family:Segoe UI,Arial;margin:2rem}
+      button{margin:.3rem}
+      pre{background:#f5f5f5;padding:1rem}
+    </style>
+  </head>
+  <body>
+    <h1>MSAL PKCE SPA</h1>
+    <p id="status">Not signed in</p>
+    <div>
+      <button id="signin">Sign in</button>
+      <button id="signout" disabled>Sign out</button>
+      <button id="acquire" disabled>Get token (silent -> popup)</button>
+      <button id="callApi" disabled>Call protected API</button>
+    </div>
+
+    <h3>Account</h3>
+    <pre id="account">(none)</pre>
+
+    <h3>Token / API response</h3>
+    <pre id="result">(none)</pre>
+    <div>
+      <a id="tokenLink" href="#" target="_blank" rel="noopener" style="display:none">Open token in jwt.ms</a>
+    </div>
+    <h4>Decoded token (if JWT)</h4>
+    <pre id="decoded">(none)</pre>
+    <h4>Raw token / diagnostics</h4>
+    <textarea id="rawToken" rows="3" style="width:100%" placeholder="raw token will appear here"></textarea>
+    <div>
+      <button id="copyToken">Copy token</button>
+      <span id="tokenInfo" style="margin-left:1rem">(no token)</span>
+    </div>
+
+    <!-- prefer a local copy of msal-browser at /libs/msal-browser.min.js, fallback to CDN -->
+    <script>
+      (function(){
+        function load(src, onload, onerror){
+          var s = document.createElement('script');
+          s.src = src; s.async = false; s.onload = onload; s.onerror = onerror;
+          document.head.appendChild(s);
+        }
+        load('libs/msal-browser.min.js', function(){console.log('Loaded local msal-browser');}, function(){
+          load('https://unpkg.com/@azure/msal-browser@2.46.1/dist/msal-browser.min.js', function(){console.log('Loaded msal-browser from CDN');}, function(){console.error('Failed to load msal-browser');});
+        });
+      })();
+    </script>
+    <script src="authConfig.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
