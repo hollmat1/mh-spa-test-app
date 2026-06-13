@@ -87,6 +87,8 @@ async function ensureMsalLoaded() {
   let msalInstance = await createMsalInstanceForClient(initialClientId);
 
   let activeAccount = null;
+  // Guard to prevent starting multiple interactive requests simultaneously
+  let interactionInProgress = false;
 
   function updateUI() {
     if (activeAccount) {
@@ -160,6 +162,9 @@ async function ensureMsalLoaded() {
 
   async function signIn() {
     try {
+      if (interactionInProgress) return;
+      interactionInProgress = true;
+      try { ui.signin.disabled = true; } catch(e){}
       // Use redirect to avoid popup communication issues
       // allow scopes from the UI to override the configured loginRequest
       const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
@@ -179,6 +184,8 @@ async function ensureMsalLoaded() {
     } catch (err) {
       console.error(err);
       ui.result.textContent = 'Login error: ' + err;
+      interactionInProgress = false;
+      try { ui.signin.disabled = false; } catch(e){}
     }
   }
 
@@ -211,12 +218,17 @@ async function ensureMsalLoaded() {
       // interaction required -> redirect fallback
       if (err instanceof msalApi.InteractionRequiredAuthError || (err.errorMessage && err.errorMessage.indexOf('interaction_required') !== -1)) {
         try {
+          if (interactionInProgress) return null;
+          interactionInProgress = true;
+          try { ui.acquire.disabled = true; } catch(e){}
           await msalInstance.acquireTokenRedirect(silentRequest);
           // token response will be handled by handleRedirectPromise
           return null;
         } catch (rerr) {
           console.error('acquireTokenRedirect error', rerr);
           ui.result.textContent = 'Token request error: ' + rerr;
+          interactionInProgress = false;
+          try { ui.acquire.disabled = false; } catch(e){}
           throw rerr;
         }
       }
@@ -369,10 +381,15 @@ async function ensureMsalLoaded() {
     } else {
       init();
     }
+    // clear any interaction guard after redirect handling completes
+    interactionInProgress = false;
+    try { ui.signin.disabled = false; ui.acquire.disabled = false; } catch(e){}
   } catch (err) {
     console.error('handleRedirectPromise error', err);
     ui.result.textContent = 'Redirect handling error: ' + err;
     init();
+    interactionInProgress = false;
+    try { ui.signin.disabled = false; ui.acquire.disabled = false; } catch(e){}
   }
 
 })();
