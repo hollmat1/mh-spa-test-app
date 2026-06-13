@@ -15,10 +15,20 @@ const authConfig = {
 
   // Where Azure will redirect after auth. Use your registered redirect URI.
   // Determine redirect URI at runtime so local testing (localhost) works
-  // and the same build can run on GitHub Pages without editing this file.
-  // Uses the current origin (e.g. http://localhost:8080 or https://user.github.io/repo)
+  // and the same build can run on GitHub Pages (including repository subpaths)
+  // Example for Pages: https://hollmat1.github.io/mh-spa-test-app/
   redirectUri: (typeof window !== 'undefined' && window.location && window.location.origin)
-    ? window.location.origin + '/'
+    ? (function(){
+        // preserve any path prefix (e.g. /mh-spa-test-app/). Strip index.html if present.
+        try {
+          let p = window.location.pathname || '/';
+          p = p.replace(/\/index\.html$/i, '/');
+          if (!p.endsWith('/')) p = p + '/';
+          return window.location.origin + p;
+        } catch (e) {
+          return window.location.origin + '/';
+        }
+      })()
     : 'http://localhost:8080/',
 
   // Scopes you want to request when acquiring a token
