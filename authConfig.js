@@ -6,8 +6,9 @@
 */
 
 const authConfig = {
-  // Replace with your client id
-  clientId: "1f416560-172d-43f6-84fe-54c51bf25035",
+  // Replace with your Application (client) ID from Azure AD app registration.
+  // Leave empty to enter it at runtime via the UI.
+  clientId: "",
 
   // Use 'common' for multi-tenant, or a tenant GUID / 'organizations' / tenant name for single-tenant
   tenant: "common",
