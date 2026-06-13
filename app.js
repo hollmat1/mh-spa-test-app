@@ -183,6 +183,25 @@ async function ensureMsalLoaded() {
       // control will return via handleRedirectPromise
     } catch (err) {
       console.error(err);
+      // If MSAL reports an interaction already in progress, wait for the redirect handling
+      const isInteractionErr = (err && (err.errorCode === 'interaction_in_progress' || (err.errorMessage && err.errorMessage.indexOf('interaction_in_progress') !== -1) || (err.message && err.message.indexOf('interaction_in_progress') !== -1)));
+      if (isInteractionErr) {
+        ui.result.textContent = 'Login in progress; waiting for redirect to complete...';
+        try {
+          const redirectResponse = await msalInstance.handleRedirectPromise();
+          if (redirectResponse && redirectResponse.account) activeAccount = redirectResponse.account;
+          else {
+            const accounts = msalInstance.getAllAccounts(); if (accounts.length > 0) activeAccount = accounts[0];
+          }
+          updateUI();
+        } catch (hErr) {
+          console.error('handleRedirectPromise after interaction_in_progress:', hErr);
+          ui.result.textContent = 'Redirect handling error: ' + hErr + '\nIf this persists, try clearing site storage (localStorage) and retry.';
+        }
+        interactionInProgress = false;
+        try { ui.signin.disabled = false; } catch(e){}
+        return;
+      }
       ui.result.textContent = 'Login error: ' + err;
       interactionInProgress = false;
       try { ui.signin.disabled = false; } catch(e){}
@@ -226,6 +245,16 @@ async function ensureMsalLoaded() {
           return null;
         } catch (rerr) {
           console.error('acquireTokenRedirect error', rerr);
+          // handle interaction_in_progress similar to signIn
+          const isInteractionErr = (rerr && (rerr.errorCode === 'interaction_in_progress' || (rerr.errorMessage && rerr.errorMessage.indexOf('interaction_in_progress') !== -1) || (rerr.message && rerr.message.indexOf('interaction_in_progress') !== -1)));
+          if (isInteractionErr) {
+            ui.result.textContent = 'Token request in progress; waiting for redirect to complete...';
+            try { const redirectResponse = await msalInstance.handleRedirectPromise(); if (redirectResponse && redirectResponse.account) activeAccount = redirectResponse.account; else { const accounts = msalInstance.getAllAccounts(); if (accounts.length > 0) activeAccount = accounts[0]; } updateUI(); }
+            catch(hErr){ console.error('handleRedirectPromise after interaction_in_progress:', hErr); ui.result.textContent = 'Redirect handling error: ' + hErr + '\nIf this persists, try clearing site storage (localStorage) and retry.'; }
+            interactionInProgress = false;
+            try { ui.acquire.disabled = false; } catch(e){}
+            return null;
+          }
           ui.result.textContent = 'Token request error: ' + rerr;
           interactionInProgress = false;
           try { ui.acquire.disabled = false; } catch(e){}
