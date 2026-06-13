@@ -72,6 +72,23 @@ async function ensureMsalLoaded() {
     if (q.tenantId && ui.tenantId) ui.tenantId.value = q.tenantId;
   })();
 
+  // Persist clientId in localStorage so it survives refreshes (unless changed)
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('mh_spa_clientId');
+      if ((!ui.clientId.value || ui.clientId.value.trim() === '') && saved) ui.clientId.value = saved;
+      if (ui.clientId) {
+        ui.clientId.addEventListener('change', () => {
+          const v = ui.clientId.value && ui.clientId.value.trim();
+          try {
+            if (v) localStorage.setItem('mh_spa_clientId', v);
+            else localStorage.removeItem('mh_spa_clientId');
+          } catch(e){}
+        });
+      }
+    }
+  } catch(e){}
+
   // Helper to create MSAL instance for a given clientId
   async function createMsalInstanceForClient(clientId) {
     const cfg = JSON.parse(JSON.stringify(authConfig.msalConfig));
@@ -177,6 +194,7 @@ async function ensureMsalLoaded() {
         const currentClientId = (msalInstance && msalInstance.getConfiguration && msalInstance.getConfiguration().auth && msalInstance.getConfiguration().auth.clientId) ? msalInstance.getConfiguration().auth.clientId : null;
         if (selectedClientId && selectedClientId !== currentClientId) {
           msalInstance = await createMsalInstanceForClient(selectedClientId);
+          try { if (typeof localStorage !== 'undefined' && selectedClientId) localStorage.setItem('mh_spa_clientId', selectedClientId); } catch(e){}
         }
       } catch (e) { /* ignore and proceed */ }
       await msalInstance.loginRedirect(loginRequest);
