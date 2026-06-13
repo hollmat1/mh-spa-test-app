@@ -1,3 +1,31 @@
+# mh-spa-test-app
+
+Simple MSAL PKCE single-page app for testing sign-in and calling a protected API.
+
+Features
+- Uses msal-browser (local copy or CDN) to authenticate via Azure AD (PKCE redirect flow).
+- UI inputs for `App (Client) ID` and `Tenant ID` with optional persistence in `localStorage`.
+- Accepts URL query parameters to prefill values: `clientId`/`appid`/`clientid` and `tenant`/`tenantId`.
+- Example: `https://<host>/index.html?clientId=YOUR_APP_ID&tenant=common`
+
+Local testing
+1. Start a simple static server in the repo root:
+
+```bash
+python -m http.server 8080
+# or: npx http-server -c-1 -p 8080
+```
+2. Open http://localhost:8080/ in your browser.
+3. Enter your Application (client) ID and Tenant ID, or pass them via query params.
+
+GitHub Pages
+- The app is ready to deploy to GitHub Pages. When published at `https://<user>.github.io/<repo>/`, the app computes the redirect URI from the page origin + path (e.g. `https://hollmat1.github.io/mh-spa-test-app/`).
+- Add both the local and Pages redirect URIs to your Azure AD app registration.
+
+Notes & troubleshooting
+- If you see `interaction_in_progress` errors, avoid starting another interactive request while a redirect is pending. Clearing site storage (`localStorage.clear()`) can help recover stuck states.
+- The client ID is stored in `localStorage` under `mh_spa_clientId` (clearing this will reset the saved App ID).
+- Do NOT commit secrets or client secrets to this repo; SPAs must never include confidential credentials.
 MSAL PKCE SPA (Multi-tenant & Single-tenant)
 
 This is a minimal public single-page app demonstrating the OAuth2 Authorization Code flow with PKCE using msal-browser.
