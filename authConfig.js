@@ -13,10 +13,12 @@ const authConfig = {
   tenant: "common",
 
   // Where Azure will redirect after auth. Use your registered redirect URI.
-  // For GitHub Pages, set this to: https://<your-username>.github.io/<repo-name>/
-  // Replace <your-username> and <repo-name> with your GitHub username and repository name.
-  // Example: "https://mattygithub.github.io/mh-spa-test-app/"
-  redirectUri: "https://<your-username>.github.io/<repo-name>/",
+  // Determine redirect URI at runtime so local testing (localhost) works
+  // and the same build can run on GitHub Pages without editing this file.
+  // Uses the current origin (e.g. http://localhost:8080 or https://user.github.io/repo)
+  redirectUri: (typeof window !== 'undefined' && window.location && window.location.origin)
+    ? window.location.origin + '/'
+    : 'http://localhost:8080/',
 
   // Scopes you want to request when acquiring a token
   loginRequest: {
