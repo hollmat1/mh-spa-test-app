@@ -205,8 +205,19 @@ async function ensureMsalLoaded() {
         }
       }
       const res = await fetch(sampleApi, options);
-      const text = await res.text();
-      ui.result.textContent = text;
+      const contentType = (res.headers && res.headers.get) ? (res.headers.get('content-type') || '') : '';
+      if (contentType.toLowerCase().indexOf('application/json') !== -1) {
+        const obj = await res.json();
+        ui.result.textContent = JSON.stringify(obj, null, 2);
+      } else {
+        const text = await res.text();
+        try {
+          const obj = JSON.parse(text);
+          ui.result.textContent = JSON.stringify(obj, null, 2);
+        } catch (e) {
+          ui.result.textContent = text;
+        }
+      }
     } catch (err) {
       console.error(err);
       ui.result.textContent = 'API call error: ' + err;
