@@ -115,14 +115,14 @@ async function ensureMsalLoaded() {
     }
     // populate API inputs from authConfig defaults
     try {
-      if (ui.apiUrl) ui.apiUrl.value = authConfig.apiEndpoint || '';
-      if (ui.apiScopes && authConfig.loginRequest && authConfig.loginRequest.scopes) ui.apiScopes.value = authConfig.loginRequest.scopes.join(' ');
-      if (ui.tenantId) ui.tenantId.value = authConfig.tenant || '';
-      if (ui.apiTenant) ui.apiTenant.value = authConfig.tenant || '';
-      if (ui.clientId) ui.clientId.value = authConfig.clientId || '';
-      if (ui.verb) ui.verb.value = 'GET';
-      if (ui.payload) ui.payload.value = '';
-      if (ui.headers) ui.headers.value = '';
+      if (ui.apiUrl && !ui.apiUrl.value) ui.apiUrl.value = authConfig.apiEndpoint || '';
+      if (ui.apiScopes && authConfig.loginRequest && authConfig.loginRequest.scopes && !ui.apiScopes.value) ui.apiScopes.value = authConfig.loginRequest.scopes.join(' ');
+      if (ui.tenantId && !ui.tenantId.value) ui.tenantId.value = authConfig.tenant || '';
+      if (ui.apiTenant && !ui.apiTenant.value) ui.apiTenant.value = authConfig.tenant || '';
+      if (ui.clientId && !ui.clientId.value) ui.clientId.value = authConfig.clientId || '';
+      if (ui.verb && !ui.verb.value) ui.verb.value = 'GET';
+      if (ui.payload && !ui.payload.value) ui.payload.value = '';
+      if (ui.headers && !ui.headers.value) ui.headers.value = '';
     } catch (e) { /* ignore */ }
     updateUI();
   }
