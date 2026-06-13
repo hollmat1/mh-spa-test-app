@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Redirecting…</title>
+    <!-- Simple client-side redirect to root so SPA can handle routing -->
+    <meta http-equiv="refresh" content="0;url=/" />
+  </head>
+  <body>
+    <script>location.replace('/' + location.search + location.hash);</script>
+  </body>
+</html>

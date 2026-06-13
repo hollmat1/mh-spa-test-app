@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MSAL PKCE SPA (Multi-/Single-tenant)</title>
+    <style>
+      :root{--max-width:900px;--accent:#0b66ff;--muted:#666}
+      html,body{height:100%}
+      body{font-family:Inter,Segoe UI,Arial,system-ui,-apple-system; background:linear-gradient(180deg,#fbfdff,#ffffff); color:#111; margin:0; padding:3rem 1rem; display:flex; justify-content:center}
+      .container{max-width:var(--max-width); width:100%}
+      h1{font-weight:600;margin:0 0 .25rem;color:#0b3d91;font-size:1.75rem}
+      #status{color:var(--muted);margin:.25rem 0 1rem}
+      .controls{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+      button{background:var(--accent);color:#fff;border:0;padding:.5rem .75rem;border-radius:8px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      button[disabled]{opacity:.45;cursor:not-allowed;background:#ccc}
+      label{display:block;margin:.5rem 0}
+      input[type=text],textarea,select{border:1px solid #e6e6e6;padding:.5rem;border-radius:6px;width:100%;box-sizing:border-box}
+      pre,textarea{background:#fff;border:1px solid #f0f0f0;padding:1rem;border-radius:8px;overflow:auto}
+      #protectedSettings{margin-top:1rem;padding:1rem;border-radius:8px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid #f0f0f0}
+      .small{color:var(--muted);font-size:.9rem}
+      a#tokenLink{color:var(--accent);text-decoration:none;font-weight:600}
+      .note{color:var(--muted);font-size:.95rem}
+    </style>
+  </head>
+  <body>
+    <main class="container">
+    <h1>MSAL PKCE SPA</h1>
+    <p id="status">Not signed in</p>
+    <div class="controls">
+      <button id="signin">Sign in</button>
+      <button id="signout" disabled>Sign out</button>
+    </div>
+    <div style="margin-top:.5rem">
+      <label>Tenant ID (use 'common' for multi-tenant): <input id="tenantId" type="text" style="width:40%" placeholder="common" /></label>
+    </div>
+    <div style="margin-top:.25rem">
+      <label>App (Client) ID: <input id="clientId" type="text" style="width:40%" placeholder="Application (client) ID" /></label>
+    </div>
+    <h3>Account</h3>
+    <pre id="account">(none)</pre>
+
+    <div>
+      <button id="acquire" disabled>Get token (silent -> popup)</button>
+      <button id="callApi" disabled>Call protected API</button>
+    </div>
+
+    <h3>Protected API settings</h3>
+    <div id="protectedSettings" style="display:none">
+      <div>
+        <label>API URL: <input id="apiUrl" type="text" style="width:60%" placeholder="https://example.com/api/endpoint"></label>
+      </div>
+      <div>
+        <label>API Tenant ID (leave empty to use SPA tenant): <input id="apiTenant" type="text" style="width:40%" placeholder="common" /></label>
+      </div>
+      <div>
+        <label>Scopes (space or comma separated): <input id="apiScopes" type="text" style="width:60%" placeholder="openid profile User.Read"></label>
+      </div>
+      <div>
+        <label>HTTP Verb: 
+          <select id="apiVerb">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+            <option>HEAD</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label>Payload (JSON or plain text):</label>
+        <textarea id="apiPayload" rows="6" style="width:100%" placeholder='{"key":"value"}'></textarea>
+      </div>
+      <div>
+        <label>Headers (one per line, <code>Key: Value</code>):</label>
+        <textarea id="apiHeaders" rows="4" style="width:100%" placeholder="Accept: application/json\nX-Custom-Header: foo"></textarea>
+      </div>
+    </div>
+
+    <h3>Token / API response</h3>
+    <pre id="result">(none)</pre>
+    <div>
+      <a id="tokenLink" href="#" target="_blank" rel="noopener" style="display:none">Open token in jwt.ms</a>
+    </div>
+    <h4>Decoded access token (if JWT)</h4>
+    <pre id="decoded">(none)</pre>
+    <h4>Raw token / diagnostics</h4>
+    <textarea id="rawToken" rows="3" style="width:100%" placeholder="raw token will appear here"></textarea>
+    <div>
+      <button id="copyToken">Copy token</button>
+      <span id="tokenInfo" style="margin-left:1rem">(no token)</span>
+    </div>
+
+    <!-- prefer a local copy of msal-browser at /libs/msal-browser.min.js, fallback to CDN -->
+    </main>
+    <script>
+      (function(){
+        function load(src, onload, onerror){
+          var s = document.createElement('script');
+          s.src = src; s.async = false; s.onload = onload; s.onerror = onerror;
+          document.head.appendChild(s);
+        }
+        load('libs/msal-browser.min.js', function(){console.log('Loaded local msal-browser');}, function(){
+          load('https://unpkg.com/@azure/msal-browser@2.46.1/dist/msal-browser.min.js', function(){console.log('Loaded msal-browser from CDN');}, function(){console.error('Failed to load msal-browser');});
+        });
+      })();
+    </script>
+    <script src="authConfig.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
