@@ -55,6 +55,23 @@ async function ensureMsalLoaded() {
     headers: document.getElementById('apiHeaders')
   };
 
+  // Helper to read optional clientId/tenant from URL query parameters
+  function getQueryParam(name) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    } catch (e) { return null; }
+  }
+
+  // Accept several common parameter names (case-insensitive)
+  (function applyQueryOverrides(){
+    const q = {};
+    ['clientId','clientid','appid'].forEach(k=>{ const v = getQueryParam(k); if (v) q.clientId = v; });
+    ['tenant','tenantId','tenantid'].forEach(k=>{ const v = getQueryParam(k); if (v) q.tenantId = v; });
+    if (q.clientId && ui.clientId) ui.clientId.value = q.clientId;
+    if (q.tenantId && ui.tenantId) ui.tenantId.value = q.tenantId;
+  })();
+
   // Helper to create MSAL instance for a given clientId
   async function createMsalInstanceForClient(clientId) {
     const cfg = JSON.parse(JSON.stringify(authConfig.msalConfig));
