@@ -17,6 +17,9 @@
       <button id="signin">Sign in</button>
       <button id="signout" disabled>Sign out</button>
     </div>
+    <div style="margin-top:.5rem">
+      <label>Tenant ID (use 'common' for multi-tenant): <input id="tenantId" type="text" style="width:40%" placeholder="common" /></label>
+    </div>
     <h3>Account</h3>
     <pre id="account">(none)</pre>
 
@@ -29,6 +32,9 @@
     <div id="protectedSettings" style="display:none">
       <div>
         <label>API URL: <input id="apiUrl" type="text" style="width:60%" placeholder="https://example.com/api/endpoint"></label>
+      </div>
+      <div>
+        <label>API Tenant ID (leave empty to use SPA tenant): <input id="apiTenant" type="text" style="width:40%" placeholder="common" /></label>
       </div>
       <div>
         <label>Scopes (space or comma separated): <input id="apiScopes" type="text" style="width:60%" placeholder="openid profile User.Read"></label>

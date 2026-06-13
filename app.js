@@ -48,7 +48,9 @@ async function ensureMsalLoaded() {
     signin: document.getElementById('signin'),
     signout: document.getElementById('signout'),
     acquire: document.getElementById('acquire'),
+    tenantId: document.getElementById('tenantId'),
     callApi: document.getElementById('callApi'),
+    apiTenant: document.getElementById('apiTenant'),
     apiUrl: document.getElementById('apiUrl'),
     apiScopes: document.getElementById('apiScopes'),
     protectedSettings: document.getElementById('protectedSettings'),
@@ -88,6 +90,8 @@ async function ensureMsalLoaded() {
     try {
       if (ui.apiUrl) ui.apiUrl.value = authConfig.apiEndpoint || '';
       if (ui.apiScopes && authConfig.loginRequest && authConfig.loginRequest.scopes) ui.apiScopes.value = authConfig.loginRequest.scopes.join(' ');
+      if (ui.tenantId) ui.tenantId.value = authConfig.tenant || '';
+      if (ui.apiTenant) ui.apiTenant.value = authConfig.tenant || '';
       if (ui.verb) ui.verb.value = 'GET';
       if (ui.payload) ui.payload.value = '';
       if (ui.headers) ui.headers.value = '';
@@ -132,6 +136,8 @@ async function ensureMsalLoaded() {
       // allow scopes from the UI to override the configured loginRequest
       const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
       const loginRequest = { scopes };
+      // allow tenant override via UI
+      try { if (ui.tenantId && ui.tenantId.value) loginRequest.authority = `https://login.microsoftonline.com/${ui.tenantId.value}`; } catch(e){}
       await msalInstance.loginRedirect(loginRequest);
       // control will return via handleRedirectPromise
     } catch (err) {
@@ -150,10 +156,15 @@ async function ensureMsalLoaded() {
     }
   }
 
-  async function getToken() {
+  async function getToken(tenantOverride) {
     if (!activeAccount) throw new Error('No active account');
     const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
     const silentRequest = { account: activeAccount, scopes };
+    // Determine authority: prefer explicit override, then API-specific tenant, then SPA tenant, then authConfig
+    const tenant = tenantOverride || (ui.apiTenant && ui.apiTenant.value) || (ui.tenantId && ui.tenantId.value) || authConfig.tenant;
+    if (tenant) {
+      silentRequest.authority = `https://login.microsoftonline.com/${tenant}`;
+    }
 
     try {
       const tokenResponse = await msalInstance.acquireTokenSilent(silentRequest);
@@ -181,7 +192,9 @@ async function ensureMsalLoaded() {
 
   async function callProtectedApi() {
     try {
-      const token = await getToken();
+      // allow API-specific tenant override
+      const apiTenant = (ui.apiTenant && ui.apiTenant.value) ? ui.apiTenant.value : null;
+      const token = await getToken(apiTenant);
       const sampleApi = (ui.apiUrl && ui.apiUrl.value) ? ui.apiUrl.value : (authConfig.apiEndpoint || null);
       if (!sampleApi) {
         ui.result.textContent = 'No API configured. Token length: ' + (token ? token.length : 0);
