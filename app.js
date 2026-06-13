@@ -31,11 +31,6 @@ async function ensureMsalLoaded() {
 (async function main(){
   const msalApi = await ensureMsalLoaded();
 
-  // In msal-browser v5+, use the factory to create a standard public client application (async init)
-  const msalInstance = await (msalApi.createStandardPublicClientApplication
-    ? msalApi.createStandardPublicClientApplication(authConfig.msalConfig)
-    : Promise.resolve(new msalApi.PublicClientApplication(authConfig.msalConfig)));
-
   const ui = {
     status: document.getElementById('status'),
     account: document.getElementById('account'),
@@ -49,6 +44,7 @@ async function ensureMsalLoaded() {
     signout: document.getElementById('signout'),
     acquire: document.getElementById('acquire'),
     tenantId: document.getElementById('tenantId'),
+    clientId: document.getElementById('clientId'),
     callApi: document.getElementById('callApi'),
     apiTenant: document.getElementById('apiTenant'),
     apiUrl: document.getElementById('apiUrl'),
@@ -58,6 +54,20 @@ async function ensureMsalLoaded() {
     payload: document.getElementById('apiPayload'),
     headers: document.getElementById('apiHeaders')
   };
+
+  // Helper to create MSAL instance for a given clientId
+  async function createMsalInstanceForClient(clientId) {
+    const cfg = JSON.parse(JSON.stringify(authConfig.msalConfig));
+    cfg.auth = cfg.auth || {};
+    cfg.auth.clientId = clientId || authConfig.clientId;
+    return msalApi.createStandardPublicClientApplication
+      ? msalApi.createStandardPublicClientApplication(cfg)
+      : Promise.resolve(new msalApi.PublicClientApplication(cfg));
+  }
+
+  // create initial MSAL instance using UI-provided clientId if present, else default
+  const initialClientId = (ui.clientId && ui.clientId.value) ? ui.clientId.value : authConfig.clientId;
+  let msalInstance = await createMsalInstanceForClient(initialClientId);
 
   let activeAccount = null;
 
@@ -92,6 +102,7 @@ async function ensureMsalLoaded() {
       if (ui.apiScopes && authConfig.loginRequest && authConfig.loginRequest.scopes) ui.apiScopes.value = authConfig.loginRequest.scopes.join(' ');
       if (ui.tenantId) ui.tenantId.value = authConfig.tenant || '';
       if (ui.apiTenant) ui.apiTenant.value = authConfig.tenant || '';
+      if (ui.clientId) ui.clientId.value = authConfig.clientId || '';
       if (ui.verb) ui.verb.value = 'GET';
       if (ui.payload) ui.payload.value = '';
       if (ui.headers) ui.headers.value = '';
@@ -135,9 +146,17 @@ async function ensureMsalLoaded() {
       // Use redirect to avoid popup communication issues
       // allow scopes from the UI to override the configured loginRequest
       const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
-      const loginRequest = { scopes };
+      let loginRequest = { scopes };
       // allow tenant override via UI
       try { if (ui.tenantId && ui.tenantId.value) loginRequest.authority = `https://login.microsoftonline.com/${ui.tenantId.value}`; } catch(e){}
+      // If the clientId input changed, recreate msalInstance using the new clientId
+      try {
+        const selectedClientId = (ui.clientId && ui.clientId.value) ? ui.clientId.value : authConfig.clientId;
+        const currentClientId = (msalInstance && msalInstance.getConfiguration && msalInstance.getConfiguration().auth && msalInstance.getConfiguration().auth.clientId) ? msalInstance.getConfiguration().auth.clientId : null;
+        if (selectedClientId && selectedClientId !== currentClientId) {
+          msalInstance = await createMsalInstanceForClient(selectedClientId);
+        }
+      } catch (e) { /* ignore and proceed */ }
       await msalInstance.loginRedirect(loginRequest);
       // control will return via handleRedirectPromise
     } catch (err) {
