@@ -19,6 +19,9 @@ const authConfig = {
   loginRequest: {
     scopes: ["openid", "profile", "User.Read"]
   }
+  ,
+  // Default protected API endpoint (Microsoft Graph - current user)
+  apiEndpoint: "https://graph.microsoft.com/v1.0/me"
 };
 
 // Build msalConfig dynamically from above

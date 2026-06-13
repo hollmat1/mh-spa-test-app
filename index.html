@@ -16,12 +16,44 @@
     <div>
       <button id="signin">Sign in</button>
       <button id="signout" disabled>Sign out</button>
+    </div>
+    <h3>Account</h3>
+    <pre id="account">(none)</pre>
+
+    <div>
       <button id="acquire" disabled>Get token (silent -> popup)</button>
       <button id="callApi" disabled>Call protected API</button>
     </div>
 
-    <h3>Account</h3>
-    <pre id="account">(none)</pre>
+    <h3>Protected API settings</h3>
+    <div id="protectedSettings" style="display:none">
+      <div>
+        <label>API URL: <input id="apiUrl" type="text" style="width:60%" placeholder="https://example.com/api/endpoint"></label>
+      </div>
+      <div>
+        <label>Scopes (space or comma separated): <input id="apiScopes" type="text" style="width:60%" placeholder="openid profile User.Read"></label>
+      </div>
+      <div>
+        <label>HTTP Verb: 
+          <select id="apiVerb">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+            <option>HEAD</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label>Payload (JSON or plain text):</label>
+        <textarea id="apiPayload" rows="6" style="width:100%" placeholder='{"key":"value"}'></textarea>
+      </div>
+      <div>
+        <label>Headers (one per line, <code>Key: Value</code>):</label>
+        <textarea id="apiHeaders" rows="4" style="width:100%" placeholder="Accept: application/json\nX-Custom-Header: foo"></textarea>
+      </div>
+    </div>
 
     <h3>Token / API response</h3>
     <pre id="result">(none)</pre>

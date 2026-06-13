@@ -48,7 +48,13 @@ async function ensureMsalLoaded() {
     signin: document.getElementById('signin'),
     signout: document.getElementById('signout'),
     acquire: document.getElementById('acquire'),
-    callApi: document.getElementById('callApi')
+    callApi: document.getElementById('callApi'),
+    apiUrl: document.getElementById('apiUrl'),
+    apiScopes: document.getElementById('apiScopes'),
+    protectedSettings: document.getElementById('protectedSettings'),
+    verb: document.getElementById('apiVerb'),
+    payload: document.getElementById('apiPayload'),
+    headers: document.getElementById('apiHeaders')
   };
 
   let activeAccount = null;
@@ -60,6 +66,7 @@ async function ensureMsalLoaded() {
       ui.signout.disabled = false;
       ui.acquire.disabled = false;
       ui.callApi.disabled = false;
+      try { if (ui.protectedSettings) ui.protectedSettings.style.display = 'block'; } catch(e){}
     } else {
       ui.status.textContent = 'Not signed in';
       ui.account.textContent = '(none)';
@@ -67,6 +74,7 @@ async function ensureMsalLoaded() {
       ui.signout.disabled = true;
       ui.acquire.disabled = true;
       ui.callApi.disabled = true;
+      try { if (ui.protectedSettings) ui.protectedSettings.style.display = 'none'; } catch(e){}
     }
   }
 
@@ -76,13 +84,55 @@ async function ensureMsalLoaded() {
     if (accounts.length > 0) {
       activeAccount = accounts[0];
     }
+    // populate API inputs from authConfig defaults
+    try {
+      if (ui.apiUrl) ui.apiUrl.value = authConfig.apiEndpoint || '';
+      if (ui.apiScopes && authConfig.loginRequest && authConfig.loginRequest.scopes) ui.apiScopes.value = authConfig.loginRequest.scopes.join(' ');
+      if (ui.verb) ui.verb.value = 'GET';
+      if (ui.payload) ui.payload.value = '';
+      if (ui.headers) ui.headers.value = '';
+    } catch (e) { /* ignore */ }
     updateUI();
+  }
+
+  function parseScopes(input) {
+    if (!input) return [];
+    // split on commas or whitespace
+    return input.split(/[,\s]+/).map(s=>s.trim()).filter(s=>s.length>0);
+  }
+
+  function parseHeaders(input) {
+    const h = {};
+    if (!input) return h;
+    const lines = input.split(/\r?\n/);
+    for (let line of lines) {
+      if (!line) continue;
+      const idx = line.indexOf(':');
+      if (idx === -1) {
+        const key = line.trim();
+        if (key) h[key] = '';
+      } else {
+        const key = line.slice(0, idx).trim();
+        const val = line.slice(idx+1).trim();
+        if (key) h[key] = val;
+      }
+    }
+    return h;
+  }
+
+  function hasHeader(headersObj, name) {
+    if (!headersObj) return false;
+    const lname = name.toLowerCase();
+    return Object.keys(headersObj).some(k => k.toLowerCase() === lname);
   }
 
   async function signIn() {
     try {
       // Use redirect to avoid popup communication issues
-      await msalInstance.loginRedirect(authConfig.loginRequest);
+      // allow scopes from the UI to override the configured loginRequest
+      const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
+      const loginRequest = { scopes };
+      await msalInstance.loginRedirect(loginRequest);
       // control will return via handleRedirectPromise
     } catch (err) {
       console.error(err);
@@ -102,7 +152,8 @@ async function ensureMsalLoaded() {
 
   async function getToken() {
     if (!activeAccount) throw new Error('No active account');
-    const silentRequest = { account: activeAccount, scopes: authConfig.loginRequest.scopes };
+    const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
+    const silentRequest = { account: activeAccount, scopes };
 
     try {
       const tokenResponse = await msalInstance.acquireTokenSilent(silentRequest);
@@ -131,12 +182,29 @@ async function ensureMsalLoaded() {
   async function callProtectedApi() {
     try {
       const token = await getToken();
-      const sampleApi = authConfig.apiEndpoint || null;
+      const sampleApi = (ui.apiUrl && ui.apiUrl.value) ? ui.apiUrl.value : (authConfig.apiEndpoint || null);
       if (!sampleApi) {
         ui.result.textContent = 'No API configured. Token length: ' + (token ? token.length : 0);
         return;
       }
-      const res = await fetch(sampleApi, { headers: { Authorization: `Bearer ${token}` } });
+      const method = (ui.verb && ui.verb.value) ? ui.verb.value.toUpperCase() : 'GET';
+      const userHeaders = (ui.headers && ui.headers.value) ? parseHeaders(ui.headers.value) : {};
+      const headers = Object.assign({}, userHeaders);
+      // Ensure Authorization cannot be overridden by user headers
+      headers['Authorization'] = `Bearer ${token}`;
+      const options = { method, headers };
+      if (method !== 'GET' && method !== 'HEAD') {
+        const payload = ui.payload && ui.payload.value ? ui.payload.value : null;
+        if (payload) {
+          // set content-type only if user didn't provide one
+          if (!hasHeader(headers, 'Content-Type')) {
+            try { JSON.parse(payload); headers['Content-Type'] = 'application/json'; }
+            catch (e) { headers['Content-Type'] = 'text/plain'; }
+          }
+          options.body = payload;
+        }
+      }
+      const res = await fetch(sampleApi, options);
       const text = await res.text();
       ui.result.textContent = text;
     } catch (err) {
