@@ -49,6 +49,7 @@ async function ensureMsalLoaded() {
     apiTenant: document.getElementById('apiTenant'),
     apiUrl: document.getElementById('apiUrl'),
     apiScopes: document.getElementById('apiScopes'),
+    useCommonForApi: document.getElementById('useCommonForApi'),
     protectedSettings: document.getElementById('protectedSettings'),
     verb: document.getElementById('apiVerb'),
     payload: document.getElementById('apiPayload'),
@@ -89,11 +90,12 @@ async function ensureMsalLoaded() {
     }
   } catch(e){}
 
-  // Helper to create MSAL instance for a given clientId
-  async function createMsalInstanceForClient(clientId) {
+  // Helper to create MSAL instance for a given clientId and optional authority
+  async function createMsalInstanceForClient(clientId, authority) {
     const cfg = JSON.parse(JSON.stringify(authConfig.msalConfig));
     cfg.auth = cfg.auth || {};
     cfg.auth.clientId = clientId || authConfig.clientId;
+    if (authority) cfg.auth.authority = authority;
     return msalApi.createStandardPublicClientApplication
       ? msalApi.createStandardPublicClientApplication(cfg)
       : Promise.resolve(new msalApi.PublicClientApplication(cfg));
@@ -240,14 +242,22 @@ async function ensureMsalLoaded() {
     if (!activeAccount) throw new Error('No active account');
     const scopes = (ui.apiScopes && ui.apiScopes.value) ? parseScopes(ui.apiScopes.value) : (authConfig.loginRequest && authConfig.loginRequest.scopes) || [];
     const silentRequest = { account: activeAccount, scopes };
-    // Determine authority: prefer explicit override, then API-specific tenant, then SPA tenant, then authConfig
-    const tenant = tenantOverride || (ui.apiTenant && ui.apiTenant.value) || (ui.tenantId && ui.tenantId.value) || authConfig.tenant;
+    // Allow optional behaviour: create a separate MSAL instance that uses the 'common' authority
+    const selectedClientId = (ui.clientId && ui.clientId.value) ? ui.clientId.value : authConfig.clientId;
+    const useCommon = ui.useCommonForApi && ui.useCommonForApi.checked;
+    // Determine authority: if using common override, use that; otherwise prefer explicit override, then API-specific tenant, then SPA tenant, then authConfig
+    const tenant = useCommon ? 'common' : (tenantOverride || (ui.apiTenant && ui.apiTenant.value) || (ui.tenantId && ui.tenantId.value) || authConfig.tenant);
     if (tenant) {
       silentRequest.authority = `https://login.microsoftonline.com/${tenant}`;
     }
 
     try {
-      const tokenResponse = await msalInstance.acquireTokenSilent(silentRequest);
+      // If requested, create a temporary MSAL instance scoped to the `common` authority so you can compare behaviors.
+      const tokenMsalInstance = (useCommon)
+        ? await createMsalInstanceForClient(selectedClientId, 'https://login.microsoftonline.com/common')
+        : msalInstance;
+
+      const tokenResponse = await tokenMsalInstance.acquireTokenSilent(silentRequest);
       ui.result.textContent = JSON.stringify(tokenResponse, null, 2);
       if (tokenResponse && tokenResponse.accessToken) showToken(tokenResponse.accessToken, 'access_token');
       return tokenResponse.accessToken;
@@ -258,6 +268,7 @@ async function ensureMsalLoaded() {
           if (interactionInProgress) return null;
           interactionInProgress = true;
           try { ui.acquire.disabled = true; } catch(e){}
+          // Always fall back to the primary MSAL instance for interactive redirect to keep redirect handling consistent
           await msalInstance.acquireTokenRedirect(silentRequest);
           // token response will be handled by handleRedirectPromise
           return null;
